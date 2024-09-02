@@ -8,22 +8,19 @@ pub struct Accounts {
 	pub accounts: Vec<Account>
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Account {
-	pub account_alias: Option<String>,
 	pub account_id: String,
 	pub account_name: String,
+	pub account_alias: Option<String>,
+	pub status: AccountStatus,
 	pub account_type: AccountType,
-	pub balance: Balance,
-	pub can_transfer_from: bool,
-	pub can_transfer_to: bool,
-	pub currency: String,
 	pub preferred: bool,
-	pub status: AccountStatus
+	pub balance: Balance,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, PartialEq, Clone)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum AccountType {
 	Cfd,
@@ -31,7 +28,7 @@ pub enum AccountType {
 	Spreadbet
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Balance {
 	pub available: f64,
@@ -40,7 +37,7 @@ pub struct Balance {
 	pub profit_loss: f64
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, PartialEq, Clone)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum AccountStatus {
 	Disabled,
@@ -623,6 +620,7 @@ pub struct WorkingOrders {
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[allow(dead_code)]
 pub struct WorkingOrder {
 	market_data: MarketData,
 	working_order_data: WorkingOrderData
