@@ -1,17 +1,18 @@
 use crate::config::Config;
 use crate::models::{LoginReq, LoginRes};
-use reqwest::Error;
-use reqwest::blocking::RequestBuilder;
+use reqwest::RequestBuilder;
 use reqwest::header::HeaderMap;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
+use reqwest::Error;
 
+#[derive(Clone)]
 pub struct Client {
 	account_id: String,
 	api_key: String,
 	username: String,
 	password: String,
-	client: reqwest::blocking::Client,
+	client: reqwest::Client,
 	config: Config
 }
 
@@ -27,49 +28,49 @@ impl Client {
 			username,
 			password,
 			config,
-			client: reqwest::blocking::Client::new()
+			client: reqwest::Client::new()
 		}
 	}
 
-	pub fn get_signed<T: DeserializeOwned, U: Serialize>(&self, endpoint: &String, version: u8, query: Option<U>) -> Result<T, Error> {
+	pub async fn get_signed<T: DeserializeOwned, U: Serialize>(&self, endpoint: &String, version: u8, query: Option<U>) -> Result<T, Error> {
 		let url = get_url(&self.config, endpoint);
-		let mut req = self.set_headers(self.client.get(url), version)?;
+		let mut req = self.set_headers(self.client.get(url), version).await?;
 
 		if let Some(query) = query {
 			req = req.query(&query);
 		}
 
-		let res = req.send()?;
-		Ok(res.json::<T>()?)
+		let res = req.send().await?;
+		Ok(res.json::<T>().await?)
 	}
-
-	pub fn post_signed<T: DeserializeOwned, U: Serialize>(&self, endpoint: &String, version: u8, data: Option<U>) -> Result<T, Error> {
+	
+	pub async fn post_signed<T: DeserializeOwned, U: Serialize>(&self, endpoint: &String, version: u8, data: Option<U>) -> Result<T, Error> {
 		let url = get_url(&self.config, endpoint);
-		let mut req = self.set_headers(self.client.post(url), version)?;
+		let mut req = self.set_headers(self.client.post(url), version).await?;
 
 		if let Some(data) = data {
 			req = req.json(&data);
 		}
 
-		let res = req.send()?;
-		Ok(res.json::<T>()?)
+		let res = req.send().await?;
+		Ok(res.json::<T>().await?)
 	}
 
-	pub fn put_signed<T: DeserializeOwned, U: Serialize>(&self, endpoint: &String, version: u8, data: Option<U>) -> Result<T, Error> {
+	pub async fn put_signed<T: DeserializeOwned, U: Serialize>(&self, endpoint: &String, version: u8, data: Option<U>) -> Result<T, Error> {
 		let url = get_url(&self.config, endpoint);
-		let mut req = self.set_headers(self.client.put(url), version)?;
+		let mut req = self.set_headers(self.client.put(url), version).await?;
 
 		if let Some(data) = data {
 			req = req.json(&data);
 		}
 
-		let res = req.send()?;
-		Ok(res.json::<T>()?)
+		let res = req.send().await?;
+		Ok(res.json::<T>().await?)
 	}
 
-	pub fn delete_signed<T: DeserializeOwned, U: Serialize>(&self, endpoint: &String, version: u8, data: Option<U>) -> Result<T, Error> {
+	pub async fn delete_signed<T: DeserializeOwned, U: Serialize>(&self, endpoint: &String, version: u8, data: Option<U>) -> Result<T, Error> {
 		let url = get_url(&self.config, endpoint);
-		let mut req = self.set_headers(self.client.post(url), version)?;
+		let mut req = self.set_headers(self.client.post(url), version).await?;
 
 		let mut headers = HeaderMap::new();
 		headers.insert("_method", "DELETE".to_string().parse().unwrap());
@@ -79,11 +80,11 @@ impl Client {
 			req = req.json(&data);
 		}
 
-		let res = req.send()?;
-		Ok(res.json::<T>()?)
+		let res = req.send().await?;
+		Ok(res.json::<T>().await?)
 	}
 
-	fn get_token(&self) -> Result<LoginRes, Error> {
+	async fn get_token(&self) -> Result<LoginRes, Error> {
 		let login = LoginReq {
 			identifier: self.username.clone(),
 			password: self.password.clone()
@@ -95,12 +96,12 @@ impl Client {
 		headers.insert("VERSION", "3".parse().unwrap());
 
 		let url = get_url(&self.config, &"/session".into());
-		let res = self.client.post(&url).headers(headers).json(&login).send()?;
-		res.json::<LoginRes>()
+		let res = self.client.post(&url).headers(headers).json(&login).send().await?;
+		res.json::<LoginRes>().await
 	}
 
-	fn set_headers(&self, req: RequestBuilder, version: u8) -> Result<RequestBuilder, Error> {
-		let token = self.get_token()?;
+	async fn set_headers(&self, req: RequestBuilder, version: u8) -> Result<RequestBuilder, Error> {
+		let token = self.get_token().await?;
 		let authorization = format!("Bearer {}", token.oauth_token.access_token);
 
 		let mut headers = HeaderMap::new();
